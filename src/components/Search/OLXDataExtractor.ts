@@ -14,9 +14,9 @@ export class OLXDataExtractor {
         
         const pageUrl = this.buildPageUrl(url, page);
         console.log(`📡 Fetching page ${page}:`, pageUrl);
-        
-        // Use CORS proxy to fetch the HTML content
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(pageUrl)}`;
+
+        // Use our own Vercel serverless proxy endpoint
+        const proxyUrl = `/api/proxy?url=${encodeURIComponent(pageUrl)}`;
         const response = await fetch(proxyUrl);
         
         if (!response.ok) {

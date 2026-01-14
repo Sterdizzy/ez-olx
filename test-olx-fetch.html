@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OLX Fetch Test</title>
+</head>
+<body>
+    <h1>OLX HTML Structure Test</h1>
+    <button onclick="testFetch()">Test Fetch OLX</button>
+    <div id="results" style="margin-top: 20px; max-height: 500px; overflow: auto; white-space: pre-wrap; font-family: monospace; font-size: 12px;"></div>
+
+    <script>
+        async function testFetch() {
+            const url = 'https://www.olx.com.br/imoveis/aluguel/apartamentos/estado-sc?q=campeche%20apartmento&bas=2&bas=3&bas=4&bas=5&gsp=1&gsp=2&gsp=3&gsp=4&gsp=5&ros=2&ros=3&ros=4&ros=5';
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = 'Fetching...\n';
+
+            try {
+                console.log('Fetching:', proxyUrl);
+                const response = await fetch(proxyUrl);
+
+                if (!response.ok) {
+                    resultsDiv.innerHTML = `Error: ${response.status} ${response.statusText}`;
+                    return;
+                }
+
+                const html = await response.text();
+                console.log('HTML length:', html.length);
+
+                // Parse HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Try all possible selectors
+                const selectors = [
+                    '.olx-adcard',
+                    '.olx-adcard__content',
+                    '[data-testid*="ad-card"]',
+                    '[data-testid*="listing"]',
+                    '[class*="adcard"]',
+                    'a[href*="/item/"]',
+                    'a[href*="/anuncio/"]',
+                    '[data-ds-component*="DS-AdCard"]',
+                    '[data-aut-id*="itemBox"]'
+                ];
+
+                let output = 'Testing selectors:\n\n';
+
+                for (const selector of selectors) {
+                    const elements = doc.querySelectorAll(selector);
+                    output += `"${selector}": ${elements.length} elements found\n`;
+
+                    if (elements.length > 0) {
+                        output += `  First element classes: ${elements[0].className}\n`;
+                        output += `  First element HTML (first 200 chars):\n  ${elements[0].outerHTML.substring(0, 200)}\n\n`;
+                    }
+                }
+
+                // Check all class names in the document
+                output += '\n\nAll unique class names containing "ad" or "card" or "listing":\n';
+                const allElements = doc.querySelectorAll('[class]');
+                const classNames = new Set();
+                allElements.forEach(el => {
+                    const classes = el.className.toString().split(' ');
+                    classes.forEach(cls => {
+                        if (cls && (cls.includes('ad') || cls.includes('card') || cls.includes('listing') || cls.includes('item'))) {
+                            classNames.add(cls);
+                        }
+                    });
+                });
+
+                Array.from(classNames).sort().forEach(cls => {
+                    output += `  .${cls}\n`;
+                });
+
+                // Check data-testid attributes
+                output += '\n\nAll data-testid attributes:\n';
+                const dataTestIds = doc.querySelectorAll('[data-testid]');
+                const testIdSet = new Set();
+                dataTestIds.forEach(el => {
+                    testIdSet.add(el.getAttribute('data-testid'));
+                });
+                Array.from(testIdSet).sort().forEach(id => {
+                    output += `  [data-testid="${id}"]\n`;
+                });
+
+                // Check for script tags with JSON data
+                output += '\n\nChecking for JSON data in script tags:\n';
+                const scripts = doc.querySelectorAll('script');
+                scripts.forEach((script, i) => {
+                    const content = script.textContent || '';
+                    if (content.includes('window.__INITIAL') || content.includes('initialState') || content.includes('"listing"') || content.includes('"ad"')) {
+                        output += `  Script ${i}: Contains potential data (${content.length} chars)\n`;
+                        output += `    Preview: ${content.substring(0, 200)}...\n`;
+                    }
+                });
+
+                resultsDiv.innerHTML = output;
+                console.log(output);
+
+            } catch (error) {
+                resultsDiv.innerHTML = `Error: ${error.message}`;
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
