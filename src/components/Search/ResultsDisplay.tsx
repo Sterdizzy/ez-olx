@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { OLXListing } from '@/types/olx';
-import { MapPin, ExternalLink, Calendar } from 'lucide-react';
+import { MapPin, ExternalLink, Calendar, Heart } from 'lucide-react';
+import { useSavedListings } from '@/hooks/useSavedListings';
+import { toast } from 'sonner';
 
 interface ResultsDisplayProps {
   filteredListings: OLXListing[];
@@ -12,6 +14,19 @@ interface ResultsDisplayProps {
 export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
   filteredListings
 }) => {
+  const { isSaved, toggleSaved } = useSavedListings();
+
+  const handleToggleSave = (listing: OLXListing) => {
+    const wasSaved = isSaved(listing.id);
+    toggleSaved(listing);
+
+    if (wasSaved) {
+      toast.success('Removed from saved listings');
+    } else {
+      toast.success('Added to saved listings');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -23,11 +38,25 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredListings.map((listing) => (
-          <Card key={listing.id} className="hover:shadow-md transition-shadow">
+          <Card key={listing.id} className="hover:shadow-md transition-shadow relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 z-10 bg-background/80 backdrop-blur-sm hover:bg-background"
+              onClick={() => handleToggleSave(listing)}
+            >
+              <Heart
+                className={`h-5 w-5 ${
+                  isSaved(listing.id)
+                    ? 'fill-red-500 text-red-500'
+                    : 'text-muted-foreground'
+                }`}
+              />
+            </Button>
             <CardHeader className="pb-3">
               <div className="aspect-video bg-muted rounded-md mb-3 overflow-hidden">
                 <img
-                  src={listing.images[0]} 
+                  src={listing.images[0]}
                   alt={listing.title}
                   className="w-full h-full object-cover"
                   onLoad={() => console.log('✅ Image loaded successfully:', listing.images[0])}
